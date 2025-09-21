@@ -142,6 +142,21 @@
         ],
       ];
 
+      const CalculatorContext = React.createContext();
+      function CalculatorProvider({ children }) {
+        const [history, setHistory] = React.useState([]);
+
+        function updateHistory(operation, parsedResult) {
+          setHistory((prev) => [...prev, `${operation}=${parsedResult}`]);
+        }
+
+        return (
+          <CalculatorContext.Provider value={{ history, updateHistory }}>
+            {children}
+          </CalculatorContext.Provider>
+        );
+      }
+
       function CalculatorDisplay({ operation, result }) {
         return (
           <div
@@ -172,6 +187,7 @@
       function Calculator() {
         const [operation, setOperation] = React.useState("");
         const [result, setResult] = React.useState("");
+        const { updateHistory } = React.useContext(CalculatorContext);
 
         function handleInputClick(input) {
           if (input === "C") {
@@ -180,7 +196,7 @@
             return;
           }
 
-          if(input === "CE") {
+          if (input === "CE") {
             setResult("");
             setOperation(operation.slice(0, -1));
             return;
@@ -190,11 +206,12 @@
             const operationResult = eval(operation.replace(/,/g, "."));
             const parsedResult = operationResult.toString().replace(/\./g, ",");
             setResult(parsedResult);
+            updateHistory(operation, parsedResult);
             return;
           }
 
-          if(result) {
-            setOperation(isNaN(input) ? `${result}${input}` : input)
+          if (result) {
+            setOperation(isNaN(input) ? `${result}${input}` : input);
             setResult("");
             return;
           }
@@ -204,9 +221,7 @@
             return;
           }
 
-          setOperation(
-            `${operation}${input}`
-          );
+          setOperation(`${operation}${input}`);
         }
 
         return (
@@ -242,17 +257,26 @@
       }
 
       function OperationHistory() {
+        const { history } = React.useContext(CalculatorContext);
+
         return (
           <Card className="w-full py-10 px-8">
             <Text as="h1" variant="heading" className="mb-4">
               Histórico de Operações
             </Text>
-            <ul className="flex flex-col gap-3">
-              <Text as="li">1 + 1 = 2</Text>
-              <Text as="li">2 + 4 = 6</Text>
-              <Text as="li">6 + 1 = 7</Text>
-              <Text as="li">9 + 9 = 18</Text>
-            </ul>
+            {history.length > 0 ? (
+              <ul className="flex flex-col gap-3">
+                {history.map((value, index) => (
+                  <Text key={`item-${index}`} as="li">
+                    {value}
+                  </Text>
+                ))}
+              </ul>
+            ) : (
+              <Text as="p" variant="muted">
+                Nenhuma operação recente.
+              </Text>
+            )}
           </Card>
         );
       }
@@ -267,8 +291,10 @@
             gap-2
             `}
           >
-            <Calculator />
-            <OperationHistory />
+            <CalculatorProvider>
+              <Calculator />
+              <OperationHistory />
+            </CalculatorProvider>
           </main>
         );
       }
